@@ -116,7 +116,8 @@ def parse_response(resp, content, strict=False, content_type=None):
         return json.loads(content)
 
     if ct in ('application/xml', 'text/xml'):
-        return get_etree().fromstring(content)
+        charset = options.get('charset', 'utf-8')
+        return get_etree().fromstring(content.decode(charset))
 
     if ct != 'application/x-www-form-urlencoded' and strict:
         return content
@@ -336,14 +337,15 @@ class OAuthRemoteApp(object):
             client = oauthlib.oauth1.Client(
                 self.consumer_key, self.consumer_secret
             )
-
-            params = self.request_token_params
-            if 'signature_method' in params:
-                client.signature_method = _encode(params['signature_method'])
-            if 'rsa_key' in params:
-                client.rsa_key = _encode(params['rsa_key'])
-            if 'signature_type' in params:
-                client.signature_type = _encode(params['signature_type'])
+            
+            if self.request_token_params:
+                params = self.request_token_params
+                if 'signature_method' in params:
+                    client.signature_method = _encode(params['signature_method'])
+                if 'rsa_key' in params:
+                    client.rsa_key = _encode(params['rsa_key'])
+                if 'signature_type' in params:
+                    client.signature_type = _encode(params['signature_type'])
 
             if token and isinstance(token, (tuple, list)):
                 client.resource_owner_key, client.resource_owner_secret = token
@@ -488,10 +490,13 @@ class OAuthRemoteApp(object):
         client = self.make_client()
         client.callback_uri = _encode(callback, self.encoding)
 
-        realm = self.request_token_params.get('realm')
-        realms = self.request_token_params.get('realms')
-        if not realm and realms:
-            realm = ' '.join(realms)
+        if self.request_token_params:
+            realm = self.request_token_params.get('realm')
+            realms = self.request_token_params.get('realms')
+            if not realm and realms:
+                realm = ' '.join(realms)
+        else:
+            realm = ''
         uri, headers, _ = client.sign(
             self.expand_url(self.request_token_url), realm=realm
         )
