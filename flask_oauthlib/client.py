@@ -21,7 +21,7 @@ try:
 except ImportError:
     from urllib import request as http
     from urllib.parse import urljoin, urlparse
-from ._utils import log
+from .utils import log
 
 
 __all__ = ('OAuth', 'OAuthRemoteApp', 'OAuthResponse', 'OAuthException')
@@ -260,7 +260,6 @@ class OAuthRemoteApp(object):
                 'OAuthRemoteApp requires consumer key and secret'
             )
 
-
         self._base_url = base_url
         self._request_token_url = request_token_url
         self._access_token_url = access_token_url
@@ -323,6 +322,8 @@ class OAuthRemoteApp(object):
         if attr:
             return attr
         if default is not False and not self.app_key:
+            # since it has no app_key, use the original property
+            # YES, it is `attr`, not default
             return attr
         app = self.oauth.app or current_app
         config = app.config[self.app_key]

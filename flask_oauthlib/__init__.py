@@ -3,14 +3,15 @@
     flask_oauthlib
     ~~~~~~~~~~~~~~
 
-    Flask-OAuthlib is an extension to Flask that allows you to interact with
-    remote OAuth enabled applications. It is a replacement for Flask-OAuth.
+    Flask-OAuthlib is an extension for Flask that allows you to interact with
+    remote OAuth enabled applications, and also helps you creating your own
+    OAuth servers.
 
     :copyright: (c) 2013 by Hsiaoming Yang.
     :license: BSD, see LICENSE for more details.
 """
 
-from . import info
+# flake8: noqa
 
-__version__ = info.VERSION
-__author__ = info.AUTHOR
+from .info import VERSION as __version__
+from .info import AUTHOR as __author__

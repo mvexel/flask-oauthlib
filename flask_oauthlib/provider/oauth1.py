@@ -17,7 +17,7 @@ from oauthlib.oauth1 import WebApplicationServer as Server
 from oauthlib.oauth1 import SIGNATURE_HMAC, SIGNATURE_RSA
 from oauthlib.common import to_unicode, add_params_to_uri
 from oauthlib.oauth1.rfc5849 import errors
-from .._utils import log, _extract_params
+from ..utils import log, extract_params, create_response
 
 SIGNATURE_METHODS = (SIGNATURE_HMAC, SIGNATURE_RSA)
 
@@ -382,7 +382,7 @@ class OAuth1Provider(object):
 
             server = self.server
 
-            uri, http_method, body, headers = _extract_params()
+            uri, http_method, body, headers = extract_params()
             try:
                 realms, credentials = server.get_realms_and_credentials(
                     uri, http_method=http_method, body=body, headers=headers
@@ -400,15 +400,16 @@ class OAuth1Provider(object):
         """When consumer confirm the authrozation."""
         server = self.server
 
-        uri, http_method, body, headers = _extract_params()
+        uri, http_method, body, headers = extract_params()
         try:
             realms, credentials = server.get_realms_and_credentials(
                 uri, http_method=http_method, body=body, headers=headers
             )
             ret = server.create_authorization_response(
-                uri, http_method, body, headers, realms, credentials)
+                uri, http_method, body, headers, realms, credentials
+            )
             log.debug('Authorization successful.')
-            return redirect(ret[0])
+            return create_response(*ret)
         except errors.OAuth1Error as e:
             return redirect(e.in_uri(self.error_uri))
         except errors.InvalidClientError as e:
@@ -431,16 +432,12 @@ class OAuth1Provider(object):
         @wraps(f)
         def decorated(*args, **kwargs):
             server = self.server
-            uri, http_method, body, headers = _extract_params()
+            uri, http_method, body, headers = extract_params()
             credentials = f(*args, **kwargs)
             try:
                 ret = server.create_request_token_response(
                     uri, http_method, body, headers, credentials)
-                uri, headers, body, status = ret
-                response = make_response(body or '', status)
-                for k, v in headers.items():
-                    response.headers[k] = v
-                return response
+                return create_response(*ret)
             except errors.OAuth1Error as e:
                 return _error_response(e)
         return decorated
@@ -462,16 +459,12 @@ class OAuth1Provider(object):
         @wraps(f)
         def decorated(*args, **kwargs):
             server = self.server
-            uri, http_method, body, headers = _extract_params()
+            uri, http_method, body, headers = extract_params()
             credentials = f(*args, **kwargs)
             try:
                 ret = server.create_access_token_response(
                     uri, http_method, body, headers, credentials)
-                uri, headers, body, status = ret
-                response = make_response(body or '', status)
-                for k, v in headers.items():
-                    response.headers[k] = v
-                return response
+                return create_response(*ret)
             except errors.OAuth1Error as e:
                 return _error_response(e)
         return decorated
@@ -485,7 +478,7 @@ class OAuth1Provider(object):
                     func()
 
                 server = self.server
-                uri, http_method, body, headers = _extract_params()
+                uri, http_method, body, headers = extract_params()
                 valid, req = server.validate_protected_resource_request(
                     uri, http_method, body, headers, realms
                 )
@@ -724,7 +717,8 @@ class OAuth1RequestValidator(RequestValidator):
         return False
 
     def validate_timestamp_and_nonce(self, client_key, timestamp, nonce,
-            request, request_token=None, access_token=None):
+                                     request, request_token=None,
+                                     access_token=None):
         """Validate the timestamp and nonce is used or not."""
         log.debug('Validate timestamp and nonce %r', client_key)
         nonce = self._noncegetter(
@@ -769,7 +763,7 @@ class OAuth1RequestValidator(RequestValidator):
         return True
 
     def validate_realms(self, client_key, token, request, uri=None,
-                       realms=None):
+                        realms=None):
         """Check if the token has permission on those realms."""
         log.debug('Validate realms %r for %r', realms, client_key)
         if request.access_token:
